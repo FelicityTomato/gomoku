@@ -95,8 +95,8 @@ def hash(rand):
 if __name__ == '__main__':
     times=0
     set_s=set()
-    rand3=[1, 1, 1, 1]
-    rand4=[1, 1, 1, 1]
+    rand3=[11, 15, 35, 51]
+    rand4=[33, 47, 60, 65]
     set_s.add(hash(rand3+rand4))
     while len(set_s)<1e10:
         rand1=[1,3,10,30]
@@ -107,14 +107,18 @@ if __name__ == '__main__':
         rand2.sort()
         if hash(rand1+rand2) in set_s: continue
         set_s.add(hash(rand1+rand2))
-        a=contest(rand1,rand2,rand3,rand4)
-        if a!=1: 
-            print("2:",rand1,rand2,times)
-            times+=1
-            if times==50:
-                print(rand3,rand4)
-                break
-        else:
+        cnt=0
+        for i in range(5):
+            a=contest(rand1,rand2,rand3,rand4)
+            if a!=1: cnt+=1
+            if cnt==3:
+                print("2:",rand1,rand2,times)
+                times+=1
+                if times==50:
+                    print(rand3,rand4)
+                    break
+        if times==50: break
+        if cnt<3:
             times=0
             rand3=rand1
             rand4=rand2
