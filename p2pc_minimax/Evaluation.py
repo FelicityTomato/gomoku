@@ -1,95 +1,44 @@
-import random
-import judge
-ROWS = 7
-COLS = 7
+def pc_turn( gomoku, ROWS, COLS):
+    _, x, y = evaluation(gomoku, gomoku.EvaSet, ROWS, COLS, gomoku.turn)
+    gomoku.play(x, y)
 
 
-def evaluation(grid,turn):
-    plus = (0,1,1,8,17,77)
-    minus = (0,1,1,20,68,94)
-    p = (1,0,0,1,1,1,1,-1)
-    value = 0
-    for i in range(ROWS):
-        for j in range(COLS):    
-            for t in range(4):
-                if i-p[t*2]<0 or j-p[t*2+1]<0 \
-                    or i-p[t*2]>=ROWS or j-p[t*2+1]>=COLS \
-                    or grid[i-p[t*2]][j-p[t*2+1]]!=grid[i][j]:
-                    for k in range(5):
-                        if grid[i][j]!=0 \
-                            and i+k*p[t*2]<ROWS and i+k*p[t*2]>=0 and j+k*p[t*2+1]<COLS and j+k*p[t*2+1]>=0 \
-                            and grid[i+k*p[t*2]][j+k*p[t*2+1]]==grid[i][j]:
-                            if k==4:
-                                if grid[i][j]==turn: value+=plus[k+1]
-                                else: value-=minus[k+1]
-                                break
-                        else:
-                            if grid[i][j]==turn: value+=plus[k]
-                            else: value-=minus[k]
-                            break
-    return value
+def evaluation(gomoku, EvaSet, ROWS, COLS, turn):
+    ret = (0, ROWS//2, COLS//2)
+    for (x, y) in EvaSet:
+        score = getScore(gomoku, x, y, ROWS, COLS, turn, True)            # Offence        
+        score += getScore(gomoku, x, y, ROWS, COLS, 3-turn, False)  # Defence
+        if score >= ret[0]:
+            ret =  (score,  x, y)
+    return ret  # (socre, X, Y)
 
-def pr():
-    for i in range(ROWS):
-        for j in range(COLS):
-            print(grid[i][j], end=' ')
-        print(end='\n')
 
-if __name__ == '__main__':
-    grid=[[0]*COLS for _ in range(ROWS)]
-    pr()
-    while True:
-        r=int(input("your row: "))
-        c=int(input("your column: "))
-        grid[r][c]=1
-        a=judge.judge(grid)
-        if a==1:
-            print("black win")
-            break
-        elif a==2:
-            print("white win")
-            break
+def getScore(gomoku, x, y, ROWS, COLS, turn, isOffence=True):
+    #          -  1   2    3    4    5     6     7    8    
+    offence = (0, 2,  4,  16, 64,  256, 256, 256, 256, 256)
+    defence = (0, 2,  8,  32, 128,  512, 512, 512, 512, 512)
+    #defence = (0, 1, 10,   30, 200,  40000,  40000,  40000,  40000)
 
-        mx1=-1e9
-        idx1=[]
-        mx2=-1e9
-        idx2=[]
-        for i in range(ROWS):
-            for j in range(COLS):
-                if grid[i][j]==0:
-                    grid[i][j]=2
-                    v=evaluation(grid,2)
-                    if v>mx2:
-                        mx2=v
-                        idx2=[i,j]
-                    elif v==mx2:
-                        idx2.append(i)
-                        idx2.append(j)
-                    grid[i][j]=0
-        for i in range(ROWS):
-            for j in range(COLS):
-                if grid[i][j]==0:
-                    grid[i][j]=1
-                    v=evaluation(grid,1)
-                    if v>mx1:
-                        mx1=v
-                        idx1=[i,j]
-                    elif v==mx1:
-                        idx1.append(i)
-                        idx1.append(j)
-                    grid[i][j]=0
-        if mx1>mx2:
-            t=random.randint(1,len(idx1)/2)
-            grid[idx1[2*t-2]][idx1[2*t-1]]=2
-        else:
-            t=random.randint(1,len(idx2)/2)
-            grid[idx2[2*t-2]][idx2[2*t-1]]=2
-        pr()
-        a=judge.judge(grid)
-        if a==1:
-            print("black win")
-            break
-        elif a==2:
-            print("white win")
-            break    
-    pr()
+    scorelist= offence if isOffence else defence
+    score = 0
+    
+    for dx, dy in ((1,0), (0,1), (1,1), (1, -1)):
+        scoreIdx = 1
+        for k in range(-1,-6, -1):
+            gx = x+ k*dx; gy = y+ k*dy     # 往前
+            if gx >= 0 and gx < ROWS and gy >= 0 and gy < COLS :
+                if gomoku.grid[gx][gy] == turn:
+                    scoreIdx+=1
+                else:
+                    break
+        for k in range(1,6):
+            gx = x+ k*dx; gy = y+k*dy     # 往後
+            if gx >= 0 and gx < ROWS and gy >= 0 and gy < COLS :
+                if gomoku.grid[gx][gy] == turn:
+                    scoreIdx+=1
+                else:
+                    break
+        scoreIdx = 5 if scoreIdx > 5 else scoreIdx
+        score += scorelist[scoreIdx]
+    return score
+

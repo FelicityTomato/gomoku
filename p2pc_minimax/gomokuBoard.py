@@ -9,8 +9,8 @@ Step04: 改坐標系，並將piece獨立為class
 
 FPS = 20
 CELL_SIZE = 32
-ROWS = 7
-COLS = 7
+ROWS = 15
+COLS = 15
 MARGIN_LEFT = CELL_SIZE // 2
 MARGIN_TOP =  CELL_SIZE // 2
 MARGIN_BOTTOM = 42
@@ -44,6 +44,8 @@ class gomokuBoard():
         self.turn = 1
         self.grid = [ [0]*COLS for _ in range(ROWS)]
         self.RUN = True
+        self.EvaSet = set()
+        self.rounddir=[(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]
 
     def run(self):
         while True:
@@ -96,7 +98,22 @@ class gomokuBoard():
             self.play(gx, gy) 
 
     def play(self, gx, gy):
-        idx = gy * ROWS + gx
+        if  self.grid[gx][gy] != 0 :
+            return
+
+        self.lastX = gx
+        self.lastY= gy
+        idx = self.encode( gx, gy)
+        for (dx, dy) in self.rounddir:
+            xx = gx+dx
+            yy = gy+dy
+            if  xx< 0 or xx >= COLS or yy < 0 or yy >=ROWS:
+                continue
+            if self.grid[xx][yy] == 0:
+                self.EvaSet.add((xx, yy))
+        if (gx,gy) in self.EvaSet:
+            self.EvaSet.remove((gx,gy))
+
         p = self.Pieces[idx]
         self.grid[gx][gy]= self.turn
         if p != None:
@@ -106,17 +123,96 @@ class gomokuBoard():
             w = self.judge(gx,gy, self.turn)
             if w != 0 :
                 self.RUN = False  
-            self.turn = self.turn ^ 3
-                
-
-    def judge(self, x, y, turn):
-        pass
-        '''
-        msg =f"DoSomething: ({x}, {y}), turn={turn}"
-        self.message(msg)
-        print(msg)
-        '''
+                if w == 1:
+                    self.message("Black win!")
+                else:
+                    self.message("White win!")
+            self.turn = 3 - self.turn 
         
+        print(f"SET size: {len(self.EvaSet)}")
+        for (x,y) in self.EvaSet:
+            print(f"({x},{y})", end=" ")
+        print()
+         
+    def encode(self,x,y):
+        return y * ROWS + x
+    '''
+    def decode(self, idx):
+        x = idx % ROWS
+        y = (idx-x) // ROWS
+        return int(x), int(y)
+    '''
+    def judge(self, x, y, turn):
+        if self.judgeV (x, y, turn): return turn
+        elif self.judgeH (x, y, turn): return turn
+        elif self.judgeS (x, y, turn): return turn
+        elif self.judgeBS(x, y, turn): return turn
+        else: return 0
+
+    def judgeV (self, x, y, turn):     # row
+        s = x-4 if x > 4 else 0
+        e = x+4 if x+4 < ROWS-1 else ROWS-1
+        
+        cnt=0
+        #print(f"|: {s} {e} turn={turn}")
+        for x in range(s, e+1):
+            if self.grid[x][y] == turn:
+                cnt+=1
+                #print(f"{x}, {y}  cnt= {cnt}")
+                if cnt==5: 
+                    return True
+            else:
+                cnt = 0
+        return False
+
+    def judgeH (self, x, y, turn):     # col
+        s = y-4 if y > 4 else 0
+        e = y+4 if y+4 < COLS-1 else COLS-1
+        
+        cnt=0
+        #print("-: ", s,e)
+        for y in range(s, e+1):
+            if self.grid[x][y] == turn:
+                cnt+=1
+                if cnt==5: return True
+            else:
+                cnt = 0
+        return False
+        
+    def judgeS (self, x, y, turn):     # \
+        mn = min(x,y)
+        s = -mn if mn < 4 else -4
+        mn = min(ROWS-1-x,COLS-1-y) 
+        e = mn if mn < 4 else 4
+
+        cnt=0
+        #print("\: ",s,e) 
+        for sft in range(s, e+1):
+            if self.grid[x+sft][y+sft] == turn:
+                cnt+=1
+                if cnt==5: return True
+            else:
+                cnt = 0
+        return False
+        
+    def judgeBS (self, x, y, turn):     # /
+        mn = min(x,(COLS-1)-y)
+        s = -mn if mn < 4 else -4
+        mn = min((ROWS-1)-x,y) 
+        e = mn if mn < 4 else 4
+
+        cnt=0
+        #print("/: ",s,e) 
+        for sft in range(s, e+1):
+            if self.grid[x+sft][y-sft] == turn:
+                cnt+=1
+                if cnt==5: return True
+            else:
+                cnt = 0
+        return False
+        
+
+
     def message (self, msg):
         if msg != "": msg_surface = self.base_font.render("", True, (0, 0, 0))  # Clean text Area
 
